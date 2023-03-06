@@ -1,81 +1,67 @@
-class Cell:
-    def __init__(self, val):
-        self.value = val
+from enum import Enum
+from dataclasses import dataclass
 
-    def set(self, val):
-        if val > 255:
-            self.value = val - 255
-        elif val < 0:
-            self.value = 256 + val
+# pylint: disable-all
+
+class TokenType(Enum):
+    TEXT = 0
+
+    BOLD_BEGIN = 1
+    BOLD_END = 2
+
+    ITALIC_BEGIN = 3
+    ITALIC_END = 4
+
+@dataclass
+class Token:
+    type: TokenType
+    content: str
+
+class Reader:
+    def __init__(self, path):
+        with open(path, 'r') as file:
+            self.content = file.read()
+
+        self.bold = False
+        self.italic = False
+
+        self.i = 0
+        self.current = ' '
+        self.complete = False
+
+        self.output = []
+
+        self.advance()
+
+    def advance(self):
+        if self.i == len(self.content):
+            self.complete = True
         else:
-            self.value = val
+            self.i += 1
+            self.current = self.content[self.i]
 
-class BrainF:
-    def __init__(self, src):
-        self.cells = [Cell(0)]
-        self.cell_ptr = 0
-        self.src_ptr = 0
-        self.loops = []
-        self.src = src
+    def read(self):
+        while not self.complete:
 
-    def run(self):
-        while self.src_ptr < len(self.src):
-            self.parse_char()
+            if self.current == '*':
+                self.handle_star()
 
-    def parse_char(self):
-        char = self.src[self.src_ptr]
+            self.advance()
 
-        if char == '+':
-            self.set_cell(1)
-        elif char == '-':
-            self.set_cell(-1)
-        elif char == '>':
-            self.set_ptr(1)
-        elif char == '<':
-            self.set_ptr(-1)
-        elif char == '[':
-            self.loops.append(self.src_ptr)
-        elif char == ']':
-            self.handle_loop()
-        elif char == ".":
-            self.output()
-        elif char == ",":
-            val = int(input("Input number: "))
-            self.set_cell(val)
+    def handle_star(self):
+        count = 0
+        
+        while self.current == '*' and not self.complete:
+            count += 1
+            self.advance()
 
-        self.src_ptr += 1
+        token_type = 0
 
-    def set_cell(self, val):
-        cell = self.cells[self.cell_ptr]
-        cell.set(cell.value + val)
-        self.cells[self.cell_ptr] = cell
-
-    def handle_loop(self):
-        if self.cells[self.cell_ptr].value != 0:
-            self.src_ptr = self.loops[-1]
+        if count == 1:
+            token_type = 3
         else:
-            self.loops.pop()
+            token_type = 1
+        
+        
 
-    def set_ptr(self, val):
-        self.cell_ptr += val
-
-        if self.cell_ptr >= len(self.cells):
-            self.cells.append(Cell(0))
-
-    def output(self):
-        val = self.cells[self.cell_ptr]
-        print(chr(val.value))
-
-    def __repr__(self):
-        string = ""
-
-        for cell in self.cells:
-            string += f"{cell.value}, "
-
-        return string
-
-if __name__ == "__main__":
-    source = input("Input brainfu*k code:\n")
-    brainf = BrainF(source)
-    brainf.run()
-    print(brainf)
+        
