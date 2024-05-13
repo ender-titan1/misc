@@ -36,6 +36,7 @@ class Card:
 class Value:
     vlaue: int
     ranks: List[Rank]
+    name: str
 
 class HandChecker:
     def straight(self, cards):
@@ -69,7 +70,7 @@ class HandChecker:
         (is_flush, ranks) = self.flush(cards)
 
         if not is_flush:
-            return False
+            return (False, None)
 
         # This is also very hacky, and only works for a full hand
 
@@ -124,49 +125,81 @@ class HandChecker:
     
     def two_pair(self, cards):
         dictionary = self.same_rank(cards)
+        pairs = list(filter(lambda kv: kv[1] == 2, dictionary.items()))
 
-        is_true = 2 in dictionary.values() and not 3 in dictionary.values()
+        is_true = 2 in dictionary.values() and not 3 in dictionary.values() and len(pairs) == 2
 
         if not is_true:
             return (False, None)
 
-        pairs = filter(lambda kv: kv[1] == 2, dictionary.items())
 
         pair_ranks = [k.value for k,_ in pairs]
         pair_ranks.sort(reverse=True)
 
         ranks = [card.rank.value for card in cards]
-        kicker_rank = ranks.remove(pair_ranks[0], pair_ranks[1])[0]
+        ranks.remove(pair_ranks[0])
+        ranks.remove(pair_ranks[1])
 
-        return (is_true, pair_ranks.append(kicker_rank))
+        pair_ranks.append(ranks[0])
+
+        return (is_true, pair_ranks)
         
     
     def full_house(self, cards):
-        same_rank = self.same_rank(cards).values()
+        dictionary = self.same_rank(cards)
 
-        return 2 in same_rank and 3 in same_rank
+        is_true = 2 in dictionary.values() and 3 in dictionary.values()
+
+        if not is_true:
+            return (False, None)
+
+        three = filter(lambda kv: kv[1] == 3, dictionary.items())
+        two = filter(lambda kv: kv[1] == 2, dictionary.items())
+        kicker = filter(lambda kv: kv[1] == 1, dictionary.items())
+
+        ranks = [three, two, kicker]
+
+        return (is_true, ranks)
+
     
     def check_hand(self, cards):
-        if self.royal_flush(cards):
-            return "Royal flush"
-        if self.straight_flush(cards):
-            return "Straight flush"
-        if self.four_of_a_kind(cards)[0]:
-            return "4 of a kind"
-        if self.full_house(cards):
-            return "Full house"
-        if self.flush(cards)[0]:
-            return "Flush"
-        if self.straight(cards)[0]:
-            return "Straight"
-        if self.three_of_a_kind(cards)[0]:
-            return "3 of a kind"
-        if self.two_pair(cards)[0]:
-            return "Two pair"
-        if self.one_pair(cards):
-            return "One pair"
+        (rf, ranks) = self.royal_flush(cards)
+        if rf:
+            return Value(10, ranks, "Royal Flush")
         
-        return ("High card", Value(0, [self.get_highest(cards)]))
+        (sf, ranks) = self.straight_flush(cards)
+        if sf:
+            return Value(9, ranks, "Straight Flush")
+        
+        (k4, ranks) = self.four_of_a_kind(cards)
+        if k4:
+            return Value(8, ranks, "Four of a Kind")
+        
+        (fh, ranks) = self.full_house(cards)
+        if fh:
+            return Value(7, ranks, "Full House")
+        
+        (f, ranks) = self.flush(cards)
+        if f:
+            return Value(6, ranks, "Flush")
+        
+        (s, ranks) = self.check_straight(cards)
+        if s:
+            return Value(5, ranks, "Straight")
+        
+        (k3, ranks) = self.three_of_a_kind(cards)
+        if k3:
+            return Value(4, ranks, "Three of a Kind")
+
+        (p2, ranks) = self.two_pair(cards)
+        if p2:
+            return Value(3, ranks, "Two Pair")
+        
+        (p1, ranks) = self.one_pair(cards)
+        if p1:
+            return Value(2, ranks, "One Pair")
+        
+        return Value(1, [self.get_highest(cards)], "High Card")
         
     def get_highest(self, cards):
         return max([card.rank.value for card in cards])
@@ -176,7 +209,7 @@ c = HandChecker()
 hand = [ Card(Suit.DIAMONDS, Rank("A")),
         Card(Suit.CLUBS, Rank("A")),
         Card(Suit.SPADES, Rank("J")),
-        Card(Suit.HEARTS, Rank("J")),
+        Card(Suit.HEARTS, Rank(8)),
         Card(Suit.CLUBS, Rank(9))
 ]
 
