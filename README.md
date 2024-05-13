@@ -1,1 +1,1 @@
-**hello**
+Projects for Computer Science (and to work on while im bored in class)
