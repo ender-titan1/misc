@@ -1,5 +1,12 @@
 import random
 import os
+from getch import getch
+
+STOCK = {
+    "Yogurt": (30000, "20-05-2024"),
+    "Cornflakes": (20000, "25-05-2024"),
+    "Milk": (10000, "31-05-2024")
+}
 
 def print_stars(amount):
     for i in range(amount):
@@ -82,5 +89,39 @@ def game():
                 if lives <= 0:
                     return
 
+def selection(opts):
+    i = 0
+    while True:
+        os.system("clear")
 
-game()
+        for idx, opt in enumerate(opts):
+            if idx == i:
+                print(f"{opt.ljust(20, ' ')} <")
+            else:
+                print(opt.ljust(20, ' '))
+
+        chr = getch()
+
+        
+        if chr == 'w':
+            i -= 1
+        if chr == "s":
+            i += 1
+
+        if i < 0:
+            i = 0
+        if i >= len(opts):
+            i = len(opts) - 1
+
+        if ord(chr) == 13:
+            break
+    
+    return (i, opts[i])
+    
+def prices():
+    (opt, _) = selection(["Buy Item", "See Stock", "Check Expiration", "Quit"])
+
+    if opt == 3:
+        return
+
+prices()

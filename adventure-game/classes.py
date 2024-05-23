@@ -11,18 +11,32 @@ class Status(Enum):
 class Person:
     name: str
     health: int
-    max_health: int
-    status: Enum
+    status: Status
     status_left: int
-    status_max: int
+
+    LENGTH = 10 + 3 + 5 + 3 + 5
 
     def __repr__(self):
-        string = f"{self.name} | {'♥' * self.health}"
+        string = f"{self.name.ljust(10, ' ')} | {('♥' * self.health).ljust(5, ' ')}"
+        string += f" | "
         
         if self.status != Status.NONE:
-            string += f" | "
-            string += colored(f"{'■' * self.status_left}{'□' * (self.status_max - self.status_left)}", "red")
+            string += colored(f"{'■' * self.status_left}{'□' * (5 - self.status_left)}", "red")
+        else:
+            string += ' ' * 5
 
         return string
 
-print(Person("Jack", 3, 4, Status.FREEZING, 3, 5))
+@dataclass
+class Resource:
+    name: str
+    amount: int
+    color: str
+    
+    LENGTH = 3 + 3 + 6
+
+    def __repr__(self):
+        string = colored(f"{str(self.amount).rjust(3, ' ')}", self.color)
+        string += " | "
+        string += colored(f"{self.name.rjust(6, ' ')}", self.color)
+        return string
