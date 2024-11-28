@@ -9,6 +9,10 @@ class UI(ABC):
         pass
 
     @abstractmethod
+    def on_goto(self, from_ui):
+        pass
+
+    @abstractmethod
     def on_input(self, key: str):
         pass
 
@@ -20,11 +24,11 @@ class UI(ABC):
     def bind_interface(self, interface):
         pass
 
-class SimpleSelection(UI):
-    def __init__(self, selection: Dict[str, Callable[[UI, str], None]]):
-        self.selection = selection
+class AbstractSelection(UI):
+    def __init__(self, sel_len: int):
         self.interface = None
         self.idx = 0
+        self.sel_len = sel_len
 
     def bind_interface(self, interface):
         self.interface = interface
@@ -32,16 +36,31 @@ class SimpleSelection(UI):
     def get_interface(self):
         return self.interface
 
+    def on_goto(self, from_ui):
+        self.idx = 0
+
     def on_input(self, key: str):
         if key == "down":
             self.idx += 1
         if key == "up":
             self.idx -= 1
 
-        if self.idx >= len(self.selection):
-            self.idx = len(self.selection) - 1
+        if self.idx >= self.sel_len:
+            self.idx = self.sel_len - 1
         if self.idx < 0:
             self.idx = 0
+
+
+class SimpleSelection(AbstractSelection):
+    def __init__(self, selection: Dict[str, Callable[[UI, str], None]]):
+        super().__init__(len(selection))
+        self.selection = selection
+
+    def on_goto(self, from_ui):
+        self.idx = 0
+
+    def on_input(self, key: str):
+        super().on_input(key)
 
         if key == "enter":
             for i, (k, v) in enumerate(zip(self.selection.keys(), self.selection.values())):
@@ -58,7 +77,7 @@ class SimpleSelection(UI):
                 print()
 
 
-class Interface:
+class TUI:
     def __init__(self):
         self.current_ui: UI = None
         self.uis = {}
@@ -74,12 +93,22 @@ class Interface:
         self.uis[id] = ui
         ui.bind_interface(self)
         return self
+    
+    def add_nav(self):
+        self.add_input("up", "UP_ARROW", "w") \
+            .add_input("down", "DOWN_ARROW", "s") \
+            .add_input("enter", "\r", "\n") \
+            .add_input("left", "LEFT_ARROW", "a") \
+            .add_input("right", "RIGHT_ARROW", "d")
+        return self
 
     def goto(self, id: str):
         if id not in self.uis.keys():
             return
         
+        old_ui = self.current_ui
         self.current_ui = self.uis[id]
+        self.current_ui.on_goto(old_ui)
 
     def update(self):
         os.system("clear")
@@ -102,19 +131,26 @@ class Interface:
     def navigate(ui: UI, string: str):
         ui.get_interface().goto(string)
 
+if __name__ == "__main__":
+    interface = TUI()
+    start = SimpleSelection({
+        "start": TUI.navigate,
+        "options": TUI.navigate,
+        "quit": lambda ui, s: ui.get_interface().quit_app()
+    })
 
-interface = Interface()
-selection = SimpleSelection({
-    "start": Interface.navigate,
-    "options": Interface.navigate,
-    "quit": lambda ui, s: ui.get_interface().quit_app()
-})
+    options = SimpleSelection({
+        "gameplay": lambda ui, s: print("Changing Gameplay"),
+        "audio": lambda ui, s: print("Changing Audio"),
+        "back": lambda ui, s: TUI.navigate(ui, "start_menu")
+    })
 
-interface.add_ui(selection, "start_menu") \
-    .add_input("up", "UP_ARROW", "w") \
-    .add_input("down", "DOWN_ARROW", "s") \
-    .add_input("enter", "\r", "\n")
+    interface.add_ui(start, "start_menu") \
+        .add_ui(options, "options") \
+        .add_input("up", "UP_ARROW", "w") \
+        .add_input("down", "DOWN_ARROW", "s") \
+        .add_input("enter", "\r", "\n")
 
-interface.goto("start_menu")
-interface.update()
-interface.main()
+    interface.goto("start_menu")
+    interface.update()
+    interface.main()
