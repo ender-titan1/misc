@@ -24,14 +24,19 @@ class UI(ABC):
     def bind_interface(self, interface):
         pass
 
+    def on_bind(self, interface):
+        pass
+
 class AbstractSelection(UI):
     def __init__(self, sel_len: int):
         self.interface = None
         self.idx = 0
         self.sel_len = sel_len
+        self.id = None
 
-    def bind_interface(self, interface):
+    def bind_interface(self, id, interface):
         self.interface = interface
+        self.id = id
 
     def get_interface(self):
         return self.interface
@@ -83,6 +88,7 @@ class TUI:
         self.uis = {}
         self.input_map = {}
         self.quit = False
+        self.state = {}
 
     def add_input(self, key: str, *ids: str):
         for id in ids:
@@ -91,7 +97,8 @@ class TUI:
 
     def add_ui(self, ui: UI, id: str):
         self.uis[id] = ui
-        ui.bind_interface(self)
+        ui.bind_interface(id, self)
+        ui.on_bind(self)
         return self
     
     def add_nav(self):
