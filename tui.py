@@ -2,6 +2,7 @@ import os, math
 from abc import ABC, abstractmethod
 from typing import Dict, Callable
 from getch import getch
+from displayable import Displayable
 
 class UI(ABC):
     @abstractmethod
@@ -21,13 +22,13 @@ class UI(ABC):
         pass
 
     @abstractmethod
-    def bind_interface(self, interface):
+    def bind_interface(self, id, interface):
         pass
 
     def on_bind(self, interface):
         pass
 
-class AbstractSelection(UI):
+class AbstractSelection(UI, Displayable):
     def __init__(self, sel_len: int):
         self.interface = None
         self.idx = 0
@@ -55,6 +56,12 @@ class AbstractSelection(UI):
         if self.idx < 0:
             self.idx = 0
 
+    def get_width(self):
+        return 30
+    
+    def get_height(self):
+        return self.sel_len
+
 
 class SimpleSelection(AbstractSelection):
     def __init__(self, selection: Dict[str, Callable[[UI, str], None]]):
@@ -72,14 +79,22 @@ class SimpleSelection(AbstractSelection):
                 if i == self.idx:
                     v(self, k)
 
+    def __repr__(self):
+        out = ""
+        for i, s in enumerate(self.selection.keys()):
+            out += s
+            if self.idx == i:
+                out += " <\n"
+            else:
+                out += "\n"
+
+        return out
 
     def update(self):
-        for i, s in enumerate(self.selection.keys()):
-            print(s, end="")
-            if self.idx == i:
-                print(" <")
-            else:
-                print()
+        print(str(self))
+
+    def get_width(self):
+        return 30
 
 
 class TUI:
