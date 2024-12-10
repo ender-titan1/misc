@@ -126,6 +126,9 @@ class OptionSelection(AbstractSelection):
                 else:
                     o.on_input(key)
 
+    def __repr__(self):
+        return ""
+
     def update(self):
         for i, o in enumerate(self.selection):
             if type(o) is ButtonOption:

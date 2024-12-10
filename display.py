@@ -33,7 +33,7 @@ class Display(UI):
             self.layers.append(layer)
 
         if row not in self.rows:
-            self.layers.append(row)
+            self.rows.append(row)
 
         return self
 
@@ -42,8 +42,12 @@ class Display(UI):
             if row not in self.row_heights.keys():
                 self.row_heights[row] = self.calc_max_row_height(row)
 
+        return self
+
     def on_goto(self, from_ui):
         pass
+
+    
 
     def on_input(self, key):
         return super().on_input(key)
@@ -70,6 +74,8 @@ class Display(UI):
                     if row < ui_row:
                         column_offset += self.row_heights[row]
 
+                print(column_offset)
+
                 text = str(displayed_ui.ui)
                 lines = text.split('\n')
                 ui = displayed_ui.ui
@@ -77,20 +83,16 @@ class Display(UI):
 
                 for i in range(self.row_heights[ui_row]):
                     line = ' ' * width
-                    if i < len(lines):
+                    if i < len(lines) and len(lines[i]) != 0:
                         line = lines[i]
-
-                    if len(line) == 0:
-                        continue
 
                     line = line.replace('\n', '')
                     line = line.ljust(width, " ")
-                    line = '|' + line
                     
-                    if i not in output.keys():
-                        output[i] = ""
+                    if i+column_offset not in output.keys():
+                        output[i+column_offset] = ""
 
-                    output[i] += line
+                    output[i+column_offset] += line
 
         for i in range(len(output)):
             print(output[i])
@@ -98,7 +100,8 @@ class Display(UI):
 tui = TUI()
 test = SimpleSelection({"Test": None, "Blah": None, "Etc": None})
 test2 = SimpleSelection({"This": None, "Is": None, "Inline": None, "Displayed": None})
-display = Display().add_ui(test, tui).add_ui(test2, tui).build()
+row_test = SimpleSelection({"Hello": None, "From": None, "The": None, "Bottom": None})
+display = Display().add_ui(test, tui).add_ui(test2, tui).add_ui(row_test, tui).build()
 
 tui.add_ui(display, "Display").add_nav()
 
