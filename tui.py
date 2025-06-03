@@ -146,7 +146,10 @@ class TUI:
 
     def await_input(self):
         char = getch()
-        key = self.input_map[char.lower()]
+        try:
+            key = self.input_map[char.lower()]
+        except(KeyError):
+            key = char
         self.current_ui.on_input(key)
 
     @staticmethod

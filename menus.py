@@ -157,26 +157,28 @@ class OptionSelection(AbstractSelection):
 
             print(text)
 
-so = SliderOption("Volume", Option.edit, 3, 10, False, "Quiet", "Loud")
-so2 = SliderOption("Test", Option.edit, 3, 6)
-dropdown = DropdownOption("Difficulty", ["Easy", "Medium", "Hard"], 0)
-advanced_btn = ButtonOption("Advanced Options", lambda ui, s: TUI.navigate(ui, "Advanced"))
-back = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Main"))
-options = OptionSelection([so, so2, dropdown, advanced_btn, back], 1)
+if __name__ == "__main__":
 
-debug_mode = DropdownOption("Debug Mode", ["Disabled", "Enabled"], 0)
-xp_multiplier = SliderOption("XP Multiplier", Option.edit, 1, 5, False, "x1", "x5")
-back2 = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Options"))
+    so = SliderOption("Volume", Option.edit, 3, 10, False, "Quiet", "Loud")
+    so2 = SliderOption("Test", Option.edit, 3, 6)
+    dropdown = DropdownOption("Difficulty", ["Easy", "Medium", "Hard"], 0)
+    advanced_btn = ButtonOption("Advanced Options", lambda ui, s: TUI.navigate(ui, "Advanced"))
+    back = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Main"))
+    options = OptionSelection([so, so2, dropdown, advanced_btn, back], 1)
 
-advanced = OptionSelection([debug_mode, xp_multiplier, back2], 1)
+    debug_mode = DropdownOption("Debug Mode", ["Disabled", "Enabled"], 0)
+    xp_multiplier = SliderOption("XP Multiplier", Option.edit, 1, 5, False, "x1", "x5")
+    back2 = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Options"))
 
-main = SimpleSelection({"Start": None, "Options": TUI.navigate})
-tui = TUI() \
-    .add_ui(main, "Main") \
-    .add_ui(options, "Options") \
-    .add_ui(advanced, "Advanced") \
-    .add_nav()
+    advanced = OptionSelection([debug_mode, xp_multiplier, back2], 1)
 
-tui.goto("Main")
-tui.update()
-tui.main()
+    main = SimpleSelection({"Start": None, "Options": TUI.navigate})
+    tui = TUI() \
+        .add_ui(main, "Main") \
+        .add_ui(options, "Options") \
+        .add_ui(advanced, "Advanced") \
+        .add_nav()
+
+    tui.goto("Main")
+    tui.update()
+    tui.main()
