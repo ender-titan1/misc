@@ -1,4 +1,4 @@
-from tui import TUI, SimpleSelection
+from tui import InterfaceManager, SimpleSelection
 from getch import getch
 import os
 
@@ -38,7 +38,7 @@ item_selection = SimpleSelection({
     "Quit": lambda ui, s: ui.get_interface().quit_app()
 })
 
-menu = TUI().add_nav().add_ui(item_selection, "main")
+menu = InterfaceManager().add_nav().add_ui(item_selection, "main")
 menu.goto("main")
 menu.update()
 menu.main()

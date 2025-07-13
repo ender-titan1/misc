@@ -1,4 +1,4 @@
-from tui import TUI, SimpleSelection
+from tui import InterfaceManager, SimpleSelection
 from menus import OptionSelection, TextInputOption, ButtonOption, DropdownOption
 from getch import getch
 from dataclasses import dataclass
@@ -13,7 +13,7 @@ class Book():
     author: str
     year: int
 
-def view_all(tui: TUI):
+def view_all(tui: InterfaceManager):
     os.system("clear")
 
     query = tui.state["__field__Filter"]
@@ -42,7 +42,7 @@ def view_all(tui: TUI):
 
     print("")
 
-def add_book(tui: TUI):
+def add_book(tui: InterfaceManager):
     global add_book_menu
     os.system("clear")
 
@@ -89,8 +89,8 @@ def add_book(tui: TUI):
 title = TextInputOption("Title")
 author = TextInputOption("Author")
 year = TextInputOption("Year")
-add = ButtonOption("Add Book", lambda ui, s: add_book(ui.get_interface()))
-back = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "main"))
+add = ButtonOption("Add Book", lambda ctx: add_book(ctx.manager))
+back = ButtonOption("Back", lambda ctx: ctx.manager.goto("main"))
 filter = TextInputOption("Filter")
 sort = DropdownOption("Sort", ["Title", "Author", "Year"], 0)
 direction = DropdownOption("Direction", ["Ascending", "Descending"], 0)
@@ -100,9 +100,9 @@ add_book_menu = OptionSelection([title, author, year, add, back], 1)
 view_menu = OptionSelection([filter, sort, direction, back], 1, preprocessor=view_all)
 
 main_menu = SimpleSelection({
-    "Add new books": lambda ui, s: TUI.navigate(ui, "add_book"),
-    "View all books": lambda ui, s: TUI.navigate(ui, "view"),
-    "Quit": lambda ui, s: ui.get_interface().quit_app()
+    "Add new books": lambda ctx: ctx.manager.goto("add_book"),
+    "View all books": lambda ctx: ctx.manager.goto("view"),
+    "Quit": lambda ctx: ctx.manager.quit_app()
 })
 
 with open("books.csv", "r") as file:
@@ -114,7 +114,7 @@ with open("books.csv", "r") as file:
 
     getch()
 
-interface = TUI().add_nav() \
+interface = InterfaceManager().add_nav() \
     .add_ui(main_menu, "main") \
     .add_ui(add_book_menu, "add_book") \
     .add_ui(view_menu, "view")

@@ -1,5 +1,5 @@
 import os
-from tui import TUI, SimpleSelection
+from tui import InterfaceManager, SimpleSelection
 from getch import getch
 
 scores = []
@@ -85,7 +85,7 @@ main_menu = SimpleSelection({
 })
 
 
-interface = TUI().add_nav().add_ui(main_menu, "main")
+interface = InterfaceManager().add_nav().add_ui(main_menu, "main")
 interface.goto("main")
 interface.update()
 interface.main()

@@ -1,11 +1,11 @@
-from tui import TUI, UI, SimpleSelection, AbstractSelection
+from tui import *
 from typing import List, Callable
 from abc import ABC, abstractmethod
 from termcolor import cprint, colored
 import os
 
 class Option(ABC):
-    def __init__(self, name: str, action: Callable[[UI, str], None]):
+    def __init__(self, name: str, action: Callable[[ActionContext], None]):
         self.action = action
         self.name = name
 
@@ -16,46 +16,42 @@ class Option(ABC):
     def on_input(self, key):
         pass
 
-    def on_bind(self, tui: TUI, parent: UI):
+    def on_bind(self, manager: InterfaceManager, parent: InterfaceComponent):
         pass
 
-    def reset(self, tui):
+    def reset(self, manager):
         pass
-
-    @staticmethod
-    def edit(ui: UI, s: str):
-        ui.get_interface().goto(f"__option__{s}")
 
 class DropdownOption(Option):
     def __init__(self, name, options, default):
-        super().__init__(name, lambda ui, s: TUI.navigate(ui, f"__option__{self.name}"))
+        super().__init__(name, lambda ctx: ctx.manager.goto(f"__option__{self.name}"))
         self.default = default
         self.options = options
         self.current = options[default]
 
-    def on_bind(self, tui, parent):
+    def on_bind(self, manager, parent):
         option_ui = SimpleSelection({
-            s: (lambda ui, s: DropdownOption.selection_method(ui, tui, parent, self, s)) for s in self.options
+            s: (lambda _: DropdownOption.selection_method(manager, parent, self, s)) for s in self.options
         })
 
-        tui.add_ui(option_ui, f"__option__{self.name}")
+        manager.add_ui(option_ui, f"__option__{self.name}")
 
-        tui.state[f"__option__{self.name}"] = self.current
+        manager.state[f"__option__{self.name}"] = self.current
 
     def __repr__(self):
         return f"[{self.current}] ▼"
     
     @staticmethod
-    def selection_method(ui, tui, parent, option, s):
-        TUI.navigate(ui, parent.id)
+    def selection_method(manager, parent, option, s):
+        manager.goto(parent.id)
         option.current = s
-        tui.state[f"__option__{option.name}"] = option.current
+        manager.state[f"__option__{option.name}"] = option.current
 
 class SliderOption(Option):
-    def __init__(self, name, action, 
+    def __init__(self, name, 
                  default: int, max: int, fill: bool = True,
                  left_label: str = "", right_label: str = ""):
-        super().__init__(name, action)
+        super().__init__(name, lambda ctx: ctx.ui.)
         self.default = default
         self.current = default
         self.max = max
@@ -100,25 +96,10 @@ class TextInputOption(Option):
         super().__init__(name, lambda ui, s: TextInputOption.handler(ui, self, s))
         self.contents = ""
 
-    def on_bind(self, tui, parent):
-        tui.state[f"__field__{self.name}"] = ""
+    def on_bind(self, manager, parent):
 
-    def reset(self, tui):
-        self.contents = ""
-        tui.state[f"__field__{self.name}"] = ""
+    def reset(self, manager):
 
-    @staticmethod
-    def handler(ui: UI, opt: Option, s: str):
-        os.system("clear")
-
-        user_in = input(f"Input {s}: ")
-
-        opt.contents = user_in
-
-        tui: TUI = ui.get_interface()
-        tui.state[f"__field__{s}"] = user_in
-        tui.goto(ui.id)
-        tui.update()
 
     def __repr__(self):
         return self.contents
@@ -143,9 +124,9 @@ class OptionSelection(AbstractSelection):
         if not "__option__" in from_ui.id:
             self.idx = 0
 
-    def on_bind(self, tui):
+    def on_bind(self, manager):
         for o in self.selection:
-            o.on_bind(tui, self)
+            o.on_bind(manager, self)
 
     def on_input(self, key):
         if not self.edit_mode:
@@ -157,7 +138,7 @@ class OptionSelection(AbstractSelection):
         for i, o in enumerate(self.selection):
             if i == self.idx and self.edit_mode:
                 if key == "enter":
-                    o.action(self, o.name)
+                    o.action(ActionContext(self, self.get_manager(), o.name))
                 else:
                     o.on_input(key)
 
@@ -166,11 +147,11 @@ class OptionSelection(AbstractSelection):
 
     def reset(self):
         for option in self.selection:
-            option.reset(self.get_interface())
+            option.reset(self.get_manager())
 
     def update(self):
         if self.preprocessor != None:
-            self.preprocessor(self.get_interface())
+            self.preprocessor(self.get_manager())
 
         for i, o in enumerate(self.selection):
             if type(o) is ButtonOption:
@@ -216,12 +197,12 @@ class OptionSelection(AbstractSelection):
 #    advanced = OptionSelection([debug_mode, textfield, xp_multiplier, back2], 1)
 #
 #    main = SimpleSelection({"Start": None, "Options": TUI.navigate})
-#    tui = TUI() \
+#    manager = TUI() \
 #        .add_ui(main, "Main") \
 #        .add_ui(options, "Options") \
 #        .add_ui(advanced, "Advanced") \
 #        .add_nav()
 #
-#    tui.goto("Main")
-#    tui.update()
-#    tui.main()
+#    manager.goto("Main")
+#    manager.update()
+#    manager.main()

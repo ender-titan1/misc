@@ -3,8 +3,15 @@ from abc import ABC, abstractmethod
 from typing import Dict, Callable
 from getch import getch
 from displayable import Displayable
+from dataclasses import dataclass
+from enum import Enum
+from termcolor import colored, COLORS, ATTRIBUTES
 
-class UI(ABC):
+class InputMode(Enum):
+    MAPPED = 0
+    RAW = 1
+
+class InterfaceComponent(ABC):
     @abstractmethod
     def update(self):
         pass
@@ -18,29 +25,97 @@ class UI(ABC):
         pass
 
     @abstractmethod
-    def get_interface(self):
+    def get_manager(self):
         pass
 
     @abstractmethod
-    def bind_interface(self, id, interface):
+    def bind_manager(self, id, manager):
         pass
 
-    def on_bind(self, interface):
+    def on_bind(self, manager):
         pass
 
-class AbstractSelection(UI, Displayable):
+class InterfaceManager:
+    def __init__(self):
+        self.current_ui: InterfaceComponent = None
+        self.input_mode = InputMode.MAPPED
+        self.uis = {}
+        self.input_map = {}
+        self.quit = False
+        self.state = {}
+
+    def add_input(self, key: str, *ids: str):
+        for id in ids:
+            self.input_map[id.lower()] = key
+        return self
+
+    def add_ui(self, ui: InterfaceComponent, id: str):
+        self.uis[id] = ui
+        ui.bind_manager(id, self)
+        ui.on_bind(self)
+        return self
+    
+    def add_nav(self):
+        self.add_input("up", "UP_ARROW", "w") \
+            .add_input("down", "DOWN_ARROW", "s") \
+            .add_input("enter", "\r", "\n") \
+            .add_input("left", "LEFT_ARROW", "a") \
+            .add_input("right", "RIGHT_ARROW", "d")
+        return self
+
+    def goto(self, id: str):
+        if id not in self.uis.keys():
+            return
+        
+        self.input_mode = InputMode.MAPPED
+        old_ui = self.current_ui
+        self.current_ui = self.uis[id]
+        self.current_ui.on_goto(old_ui)
+
+    def update(self):
+        os.system("clear")
+        self.current_ui.update()
+
+    def main(self):
+        while not self.quit:
+            self.await_input()
+            self.update()
+
+    def quit_app(self):
+        self.quit = True
+
+    def await_input(self):
+        char = getch()
+
+        if self.input_mode == InputMode.RAW:
+            key = char
+        else:
+            try:
+                key = self.input_map[char.lower()]
+            except(KeyError):
+                return
+            
+        self.current_ui.on_input(key)
+
+@dataclass
+class ActionContext:
+    ui: InterfaceComponent
+    manager: InterfaceManager
+    string: str
+
+class AbstractSelection(InterfaceComponent, Displayable):
     def __init__(self, sel_len: int):
-        self.interface = None
+        self.manager = None
         self.idx = 0
         self.sel_len = sel_len
         self.id = None
 
-    def bind_interface(self, id, interface):
-        self.interface = interface
+    def bind_manager(self, id, manager):
+        self.manager = manager
         self.id = id
 
-    def get_interface(self):
-        return self.interface
+    def get_manager(self):
+        return self.manager
 
     def on_goto(self, from_ui):
         self.idx = 0
@@ -64,7 +139,7 @@ class AbstractSelection(UI, Displayable):
 
 
 class SimpleSelection(AbstractSelection):
-    def __init__(self, selection: Dict[str, Callable[[UI, str], None]]):
+    def __init__(self, selection: Dict[str, Callable[[ActionContext], None]]):
         super().__init__(len(selection))
         self.selection = selection
 
@@ -77,7 +152,7 @@ class SimpleSelection(AbstractSelection):
         if key == "enter":
             for i, (k, v) in enumerate(zip(self.selection.keys(), self.selection.values())):
                 if i == self.idx:
-                    v(self, k)
+                    v(ActionContext(self, self.get_manager(), k))
 
     def __repr__(self):
         out = ""
@@ -95,87 +170,3 @@ class SimpleSelection(AbstractSelection):
 
     def get_width(self):
         return 30
-
-
-class TUI:
-    def __init__(self):
-        self.current_ui: UI = None
-        self.uis = {}
-        self.input_map = {}
-        self.quit = False
-        self.state = {}
-
-    def add_input(self, key: str, *ids: str):
-        for id in ids:
-            self.input_map[id.lower()] = key
-        return self
-
-    def add_ui(self, ui: UI, id: str):
-        self.uis[id] = ui
-        ui.bind_interface(id, self)
-        ui.on_bind(self)
-        return self
-    
-    def add_nav(self):
-        self.add_input("up", "UP_ARROW", "w") \
-            .add_input("down", "DOWN_ARROW", "s") \
-            .add_input("enter", "\r", "\n") \
-            .add_input("left", "LEFT_ARROW", "a") \
-            .add_input("right", "RIGHT_ARROW", "d")
-        return self
-
-    def goto(self, id: str):
-        if id not in self.uis.keys():
-            return
-        
-        old_ui = self.current_ui
-        self.current_ui = self.uis[id]
-        self.current_ui.on_goto(old_ui)
-
-    def update(self):
-        os.system("clear")
-        self.current_ui.update()
-
-    def main(self):
-        while not self.quit:
-            self.await_input()
-            self.update()
-
-    def quit_app(self):
-        self.quit = True
-
-    def await_input(self):
-        char = getch()
-        try:
-            key = self.input_map[char.lower()]
-        except(KeyError):
-            key = char
-        self.current_ui.on_input(key)
-
-    @staticmethod
-    def navigate(ui: UI, string: str):
-        ui.get_interface().goto(string)
-
-if __name__ == "__main__":
-    interface = TUI()
-    start = SimpleSelection({
-        "start": TUI.navigate,
-        "options": TUI.navigate,
-        "quit": lambda ui, s: ui.get_interface().quit_app()
-    })
-
-    options = SimpleSelection({
-        "gameplay": lambda ui, s: print("Changing Gameplay"),
-        "audio": lambda ui, s: print("Changing Audio"),
-        "back": lambda ui, s: TUI.navigate(ui, "start_menu")
-    })
-
-    interface.add_ui(start, "start_menu") \
-        .add_ui(options, "options") \
-        .add_input("up", "UP_ARROW", "w") \
-        .add_input("down", "DOWN_ARROW", "s") \
-        .add_input("enter", "\r", "\n")
-
-    interface.goto("start_menu")
-    interface.update()
-    interface.main()
