@@ -31,7 +31,7 @@ class DropdownOption(Option):
 
     def on_bind(self, manager, parent):
         option_ui = SimpleSelection({
-            s: (lambda _: DropdownOption.selection_method(manager, parent, self, s)) for s in self.options
+            x: (lambda ctx: DropdownOption.selection_method(manager, parent, self, ctx.string)) for x in self.options
         })
 
         manager.add_ui(option_ui, f"__option__{self.name}")
@@ -42,22 +42,24 @@ class DropdownOption(Option):
         return f"[{self.current}] ▼"
     
     @staticmethod
-    def selection_method(manager, parent, option, s):
+    def selection_method(manager, parent, option, string):
         manager.goto(parent.id)
-        option.current = s
+        option.current = string
         manager.state[f"__option__{option.name}"] = option.current
 
 class SliderOption(Option):
-    def __init__(self, name, 
+    def __init__(self, name,
                  default: int, max: int, fill: bool = True,
-                 left_label: str = "", right_label: str = ""):
-        super().__init__(name, lambda ctx: ctx.ui.)
+                 left_label: str = "", right_label: str = "",
+                 dispaly_func: Callable[[int], str] = None):
+        super().__init__(name, lambda _: None)
         self.default = default
         self.current = default
         self.max = max
         self.fill = fill
-        self.left = left_label
-        self.right = right_label
+        self.left = f"{left_label} "
+        self.right = f" {right_label}"
+        self.display_func = dispaly_func
 
     def on_input(self, key):
         if key == "left":
@@ -70,7 +72,7 @@ class SliderOption(Option):
         
         if self.current < 1:
             self.current = 1
-        
+
     def __repr__(self):
         empty_sq = "□"
         full_sq =  "■"
@@ -82,7 +84,12 @@ class SliderOption(Option):
             empty = self.current - 1
             string = (empty_sq * empty) + full_sq + (empty_sq * remaining)
 
-        return f"{self.left} {string} {self.right}"
+        display = ""
+
+        if self.display_func != None:
+            display = f" ({self.display_func(self.current)})"
+
+        return f"{self.left}{string}{self.right}{display}"
 
 class ButtonOption(Option):
     def __init__(self, name, action):
@@ -93,13 +100,25 @@ class ButtonOption(Option):
 
 class TextInputOption(Option):
     def __init__(self, name):
-        super().__init__(name, lambda ui, s: TextInputOption.handler(ui, self, s))
+        super().__init__(name, lambda ctx: TextInputOption.handler(ctx.ui, self, ctx.string))
         self.contents = ""
 
     def on_bind(self, manager, parent):
+        manager.state[f"__field__{self.name}"] = ""
 
     def reset(self, manager):
+        self.contents = ""
+        manager.state[f"__field__{self.name}"] = ""
 
+    @staticmethod
+    def handler(ui: InterfaceComponent, opt: Option, s: str):
+        os.system("clear")
+        user_in = input(f"Input {s}:")
+        opt.contents = user_in
+        manager = ui.get_manager()
+        manager.state[f"__field__{s}"] = user_in
+        manager.goto(ui.id)
+        manager.update()
 
     def __repr__(self):
         return self.contents
@@ -180,29 +199,29 @@ class OptionSelection(AbstractSelection):
 
             print(text)
 
-#if __name__ == "__main__":
-#
-#    so = SliderOption("Volume", Option.edit, 3, 10, False, "Quiet", "Loud")
-#    so2 = SliderOption("Test", Option.edit, 3, 6)
-#    dropdown = DropdownOption("Difficulty", ["Easy", "Medium", "Hard"], 0)
-#    advanced_btn = ButtonOption("Advanced Options", lambda ui, s: TUI.navigate(ui, "Advanced"))
-#    back = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Main"))
-#    options = OptionSelection([so, so2, dropdown, advanced_btn, back], 1)
-#
-#    debug_mode = DropdownOption("Debug Mode", ["Disabled", "Enabled"], 0)
-#    xp_multiplier = SliderOption("XP Multiplier", Option.edit, 1, 5, False, "x1", "x5")
-#    textfield = TextInputOption("Name")
-#    back2 = ButtonOption("Back", lambda ui, s: TUI.navigate(ui, "Options"))
-#
-#    advanced = OptionSelection([debug_mode, textfield, xp_multiplier, back2], 1)
-#
-#    main = SimpleSelection({"Start": None, "Options": TUI.navigate})
-#    manager = TUI() \
-#        .add_ui(main, "Main") \
-#        .add_ui(options, "Options") \
-#        .add_ui(advanced, "Advanced") \
-#        .add_nav()
-#
-#    manager.goto("Main")
-#    manager.update()
-#    manager.main()
+if __name__ == "__main__":
+
+    so = SliderOption("Volume", 3, 10, False, "Quiet", "Loud", lambda x: str(x))
+    so2 = SliderOption("Test", 3, 6)
+    dropdown = DropdownOption("Difficulty", ["Easy", "Medium", "Hard"], 0)
+    advanced_btn = ButtonOption("Advanced Options", lambda ctx: ctx.manager.goto("Advanced"))
+    back = ButtonOption("Back", lambda ctx: ctx.manager.goto("Main"))
+    options = OptionSelection([so, so2, dropdown, advanced_btn, back], 1)
+
+    debug_mode = DropdownOption("Debug Mode", ["Disabled", "Enabled"], 0)
+    xp_multiplier = SliderOption("XP Multiplier", 1, 5, False, "x1", "x5")
+    textfield = TextInputOption("Name")
+    back2 = ButtonOption("Back", lambda ctx: ctx.manager.goto("Options"))
+
+    advanced = OptionSelection([debug_mode, textfield, xp_multiplier, back2], 1)
+
+    main = SimpleSelection({"Start": None, "Options": lambda ctx: ctx.manager.goto("Options")})
+    manager = InterfaceManager() \
+        .add_ui(main, "Main") \
+        .add_ui(options, "Options") \
+        .add_ui(advanced, "Advanced") \
+        .add_nav()
+
+    manager.goto("Main")
+    manager.update()
+    manager.main()
