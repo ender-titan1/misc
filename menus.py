@@ -113,7 +113,7 @@ class TextInputOption(Option):
     @staticmethod
     def handler(ui: InterfaceComponent, opt: Option, s: str):
         os.system("clear")
-        user_in = input(f"Input {s}:")
+        user_in = input(f"Input {s}: ")
         opt.contents = user_in
         manager = ui.get_manager()
         manager.state[f"__field__{s}"] = user_in
